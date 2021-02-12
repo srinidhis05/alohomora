@@ -30,19 +30,21 @@ class CredStash(object):
     """Actual Credstash class wrapper"""
 
     def listSecrets(self, table='credential-store',
-                    region=credstash.DEFAULT_REGION):
+                    region=credstash.DEFAULT_REGION,endpoint_url=None):
         return credstash.getAllSecrets(
             table=table,
-            region=region
+            region=region,
+            endpoint_url=endpoint_url
         )
 
 
 class Alohomora(object):
     """Alohomora unlocks secrets"""
 
-    def __init__(self, env, app, region=credstash.DEFAULT_REGION, mock=False):
+    def __init__(self, env, app, endpoint_url=None,region=credstash.DEFAULT_REGION, mock=False):
         self.env = self.canonical_env(env)
         self.app = self.canonical_app(app)
+        self.endpoint_url = endpoint_url
         self.failed_lookups = []
         if mock:
             self.stash = MockStash()
@@ -65,14 +67,14 @@ class Alohomora(object):
         if self.secrets == None:
             self.secrets = self.stash.listSecrets(
                 self.make_table_name(),
-                region=self.region)
+                region=self.region,endpoint_url=self.endpoint_url)
 
     def make_table_name(self):
         return "credstash-{self.env}-{self.app}".format(**locals())
 
     def create_table(self):
         credstash.createDdbTable(
-            table=self.make_table_name(), region=self.region)
+            table=self.make_table_name(), region=self.region , endpoint_url=self.endpoint_url)
 
     def store(self, key, secret):
         msg = ''
@@ -81,6 +83,7 @@ class Alohomora(object):
                                 region=self.region,
                                 name=key,
                                 secret=secret,
+                                endpoint_url=self.endpoint_url,
                                 )
             msg = "secret saved"
         except Exception as e:
